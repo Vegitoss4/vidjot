@@ -1,27 +1,34 @@
-const express = require("express");
-const exphbs = require("express-handlebars");
-const methodOverride = require("method-override");
-const flash = require("connect-flash");
+const express = require('express');
 const path = require('path');
-const session = require("express-session");
-const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
+const exphbs  = require('express-handlebars');
+const methodOverride = require('method-override');
+const flash = require('connect-flash');
+const session = require('express-session');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const mongoose = require('mongoose');
+
 const app = express();
 
-//Load routes
+// Load routes
 const ideas = require('./routes/ideas');
 const users = require('./routes/users');
+
+// Passport Config
+require('./config/passport')(passport);
+
+// DB Config
+const db =require('./config/database');
 
 //Map Global promise - get rid of warning
 mongoose.Promise = global.Promise;
 //Connect to mongoose
 mongoose
   .connect(
-    "mongodb://localhost/vidjot-dev",
+    db.mongoURI,
     {
       useMongoClient: true
-    }
-  )
+    })
   .then(() => console.log("MongoDB Connected ..."))
   .catch(err => console.log(err));
 
@@ -48,14 +55,19 @@ app.use(
   })
 );
 
+//Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 //Use Flash Middleware
 app.use(flash());
 
-//Global Variables
-app.use(function(req, res, next) {
-  res.locals.success_msg = req.flash("success_msg");
-  res.locals.error_msg = req.flash("error_msg");
-  res.locals.error = req.flash("error");
+// Global variables
+app.use(function(req, res, next){
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  res.locals.error = req.flash('error');
+  res.locals.user = req.user || null;
   next();
 });
 
@@ -77,7 +89,8 @@ app.get('/about', (req, res) => {
 app.use('/ideas', ideas);
 app.use('/users', users);
 
-const port = 5000;
+const port = process.env.PORT || 5000;
+
 app.listen(port, () => {
   console.log(`Server starter on port ${port}`);
 });
